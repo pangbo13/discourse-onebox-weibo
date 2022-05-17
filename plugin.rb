@@ -1,8 +1,10 @@
 # name: discourse-onebox-weibo
 # about: 为 Discourse Onebox 增加微博支持
-# version: 0.1.0
+# version: 0.1.2
 # authors: pangbo13
 # url: https://github.com/pangbo13/discourse-onebox-weibo
+
+require_relative "../../lib/onebox"
 
 Onebox = Onebox
 
@@ -15,14 +17,29 @@ module Onebox
         class WeiboOnebox
             include Engine
             include LayoutSupport
-
-            matches_regexp(/^(https?:\/\/)?passport\.weibo\.com\/visitor\/visitor\?.+$/)
+# share.api.weibo.cn/share/
+            matches_regexp(/^(https?:\/\/)?(passport\.weibo\.com\/visitor\/visitor\?.+)|(m\.weibo\.cn\/detail\/.+)|(share\.api\.weibo\.cn\/share\/.+)$/)
             always_https
 
             GOOGLE_UA = "Googlebot/2.1 (+http://www.google.com/bot.html)"
 
+            def mobile?
+                @mobile ||= (uri.host == "m.weibo.cn")
+            end
+
+            def share_api?
+                @share_api ||= (uri.host == "share.api.weibo.cn")
+            end
+
             def raw_url
-                @raw_url ||= CGI.parse(uri.query)['url'].first
+                if @raw_url
+                    return @raw_url
+                end
+                if mobile? || share_api?
+                    @raw_url = uri.to_s
+                else
+                    @raw_url ||= CGI.parse(uri.query)['url'].first
+                end
             end
 
             def weibo_data
@@ -31,16 +48,29 @@ module Onebox
                 end
                 response = Onebox::Helpers.fetch_response(raw_url,
                     headers:{"User-Agent" => GOOGLE_UA}) rescue nil
-                html = Nokogiri::HTML(response)
                 weibo_meta_data = {}
-                
-                html.css('meta').each do |m|
-                    puts m
-                    if m.attribute('name') && m.attribute('content') 
-                        m_content = m.attribute('content').to_s
-                        m_name = m.attribute('name').to_s
-                        weibo_meta_data[m_name.to_sym] = m_content
+                if mobile?
+                    page_info = ::JSON.parse(response.scan(/render_data = (.*?)\[0\]/m)[0][0])[0]
+                    content = Nokogiri::HTML(page_info["status"]["text"]).text
+                    weibo_meta_data[:'title'] = page_info["status"]["status_title"]
+                    weibo_meta_data[:'description'] = content
+                    weibo_meta_data[:'img'] = page_info["status"]["thumbnail_pic"]
+                elsif share_api?
+                    html = Nokogiri::HTML(response)
+                    weibo_meta_data[:'description'] = html.at_css(".weibo-text").text.strip
+                    weibo_meta_data[:'img'] = html.at_css(".card-main img")["src"] rescue nil
+                    weibo_meta_data[:'title'] = html.at_css(".weibo-top span").text.strip + " 的微博"
+                else
+                    html = Nokogiri::HTML(response)
+                    html.css('meta').each do |m|
+                        puts m
+                        if m.attribute('name') && m.attribute('content') 
+                            m_content = m.attribute('content').to_s
+                            m_name = m.attribute('name').to_s
+                            weibo_meta_data[m_name.to_sym] = m_content
+                        end
                     end
+                    weibo_meta_data[:'title'] = html.at_css('title').text
                 end
                 @weibo_data = weibo_meta_data
             end
@@ -49,7 +79,9 @@ module Onebox
                 @data ||= {
                     link: raw_url.to_s,
                     keywords: weibo_data[:keywords] || raw_url.to_s,
-                    description: weibo_data[:description],
+                    description: weibo_data[:description].truncate(100),
+                    title: weibo_data[:title] || raw_url.to_s,
+                    image: weibo_data[:img]
                 }
             rescue
                 {}

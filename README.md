@@ -6,4 +6,6 @@
 ## 支持的链接
 
 * https://weibo.com/\*\*\*\*/\*\*\*\*
+* https://share.api.weibo.cn/share/\*
+* m.weibo.cn/\*
 
