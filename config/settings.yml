@@ -1,0 +1,3 @@
+plugins:
+  weibo_onebox_priority:
+    default: 100

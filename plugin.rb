@@ -1,10 +1,14 @@
 # name: discourse-onebox-weibo
 # about: 为 Discourse Onebox 增加微博支持
-# version: 0.1.5
+# version: 0.1.7
 # authors: pangbo13
 # url: https://github.com/pangbo13/discourse-onebox-weibo
 
+# redis-cli flushall
+
 require_relative "../../lib/onebox"
+
+enabled_site_setting :weibo_onebox_priority
 
 after_initialize do
     Onebox.options.load_paths.push(File.join(File.dirname(__FILE__), "templates"))
@@ -20,6 +24,10 @@ after_initialize do
                 always_https
 
                 GOOGLE_UA = "Googlebot/2.1 (+http://www.google.com/bot.html)"
+
+                def self.priority
+                    SiteSetting.weibo_onebox_priority rescue 100
+                end
 
                 def mobile?
                     @mobile ||= (uri.host == "m.weibo.cn")
@@ -69,7 +77,11 @@ after_initialize do
                         html = Nokogiri::HTML(response)
                         weibo_meta_data[:'description'] = html.at_css(".weibo-text").text.strip
                         weibo_meta_data[:'img'] = html.at_css(".card-main img")["src"] rescue nil
-                        weibo_meta_data[:'title'] = html.at_css(".weibo-top span").text.strip + " 的微博"
+                        user_name = html.at_css(".weibo-top span").text.strip
+                        I18n.with_locale(SiteSetting.default_locale.to_sym) do
+                            weibo_meta_data[:'title'] =  I18n.t("weibo_onebox.title_by_user_name", user_name: user_name)
+                        end
+                        # weibo_meta_data[:'title'] =  user_name + " 的微博"
                     else    # passport.weibo.com
                         html = Nokogiri::HTML(response)
                         html.css('meta').each do |m|
