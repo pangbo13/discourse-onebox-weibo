@@ -3,3 +3,4 @@ zh_CN:
     weibo_onebox_priority: "微博Onebox插件优先级（越低的值代表越高优先级，高于200将被默认Onebox替代）"
   weibo_onebox:
     title_by_user_name: "%{user_name} 的微博"
+    name_of_weibo: "微博"

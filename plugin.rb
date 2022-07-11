@@ -1,6 +1,6 @@
 # name: discourse-onebox-weibo
 # about: 为 Discourse Onebox 增加微博支持
-# version: 0.1.7
+# version: 0.1.9
 # authors: pangbo13
 # url: https://github.com/pangbo13/discourse-onebox-weibo
 
@@ -69,19 +69,20 @@ after_initialize do
                     weibo_meta_data = {}
                     if mobile?      #m.weibo.cn
                         page_info = ::JSON.parse(response.scan(/render_data = (.*?)\[0\]/m)[0][0])[0]
-                        content = Nokogiri::HTML(page_info["status"]["text"]).text
+                        content = Nokogiri::HTML(page_info["status"]["text"])&.text
                         weibo_meta_data[:'title'] = page_info["status"]["status_title"]
                         weibo_meta_data[:'description'] = content
                         weibo_meta_data[:'img'] = page_info["status"]["thumbnail_pic"]
                     elsif share_api?    #share.api.weibo.cn
                         html = Nokogiri::HTML(response)
-                        weibo_meta_data[:'description'] = html.at_css(".weibo-text").text.strip
-                        weibo_meta_data[:'img'] = html.at_css(".card-main img")["src"] rescue nil
-                        user_name = html.at_css(".weibo-top span").text.strip
-                        I18n.with_locale(SiteSetting.default_locale.to_sym) do
-                            weibo_meta_data[:'title'] =  I18n.t("weibo_onebox.title_by_user_name", user_name: user_name)
+                        weibo_meta_data[:'description'] = html&.at_css(".weibo-text")&.text&.strip
+                        weibo_meta_data[:'img'] = html&.at_css(".card-main img")["src"] rescue nil
+                        user_name = html&.at_css(".weibo-top span")&.text&.strip
+                        if !user_name.nil?
+                            I18n.with_locale(SiteSetting.default_locale.to_sym) do
+                                weibo_meta_data[:'title'] =  I18n.t("weibo_onebox.title_by_user_name", user_name: user_name)
+                            end
                         end
-                        # weibo_meta_data[:'title'] =  user_name + " 的微博"
                     else    # passport.weibo.com
                         html = Nokogiri::HTML(response)
                         html.css('meta').each do |m|
@@ -97,15 +98,23 @@ after_initialize do
                 end
 
                 def data
-                    @data ||= {
-                        link: raw_url.to_s,
-                        keywords: weibo_data[:keywords] || raw_url.to_s,
-                        description: weibo_data[:description].truncate(100),
-                        title: weibo_data[:title] || raw_url.to_s,
-                        image: weibo_data[:img]
-                    }
-                rescue
-                    {}
+                    @data ||= I18n.with_locale(SiteSetting.default_locale.to_sym) do
+                        {
+                            link: raw_url.to_s,
+                            keywords: weibo_data[:keywords] || raw_url.to_s,
+                            description: weibo_data[:description]&.truncate(100),
+                            title: weibo_data[:title] || I18n.t("weibo_onebox.name_of_weibo"),
+                            image: weibo_data[:img]
+                        }
+                    end
+                rescue StandardError => err
+                    # puts err
+                    I18n.with_locale(SiteSetting.default_locale.to_sym) do
+                        {
+                            link: raw_url.to_s,
+                            title: I18n.t("weibo_onebox.name_of_weibo")
+                        }
+                    end
                 end
             end
         end
