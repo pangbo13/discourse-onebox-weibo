@@ -10,6 +10,8 @@ require_relative "../../lib/onebox"
 
 enabled_site_setting :weibo_onebox_priority
 
+register_asset "stylesheets/common/weibo-onebox.scss"
+
 after_initialize do
     Onebox.options.load_paths.push(File.join(File.dirname(__FILE__), "templates"))
 end
