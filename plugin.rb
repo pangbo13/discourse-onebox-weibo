@@ -1,6 +1,6 @@
 # name: discourse-onebox-weibo
 # about: 为 Discourse Onebox 增加微博支持
-# version: 0.1.10
+# version: 0.2.0
 # authors: pangbo13
 # url: https://github.com/pangbo13/discourse-onebox-weibo
 
@@ -82,15 +82,21 @@ after_initialize do
                             end
                         end
                     else    # passport.weibo.com
-                        html = Nokogiri::HTML(response)
-                        html.css('meta').each do |m|
-                            if m.attribute('name') && m.attribute('content') 
-                                m_content = m.attribute('content').to_s
-                                m_name = m.attribute('name').to_s
-                                weibo_meta_data[m_name.to_sym] = m_content
+                        # for search page, we only get the search keyword from url
+                        # since the search page requires login
+                        if URI(raw_url).host == "s.weibo.com"
+                            weibo_meta_data[:keywords] = CGI.parse(URI(raw_url).query)['q'].first
+                        else
+                            html = Nokogiri::HTML(response)
+                            html.css('meta').each do |m|
+                                if m.attribute('name') && m.attribute('content') 
+                                    m_content = m.attribute('content').to_s
+                                    m_name = m.attribute('name').to_s
+                                    weibo_meta_data[m_name.to_sym] = m_content
+                                end
                             end
+                            weibo_meta_data[:title] = html.at_css('title').text
                         end
-                        weibo_meta_data[:'title'] = html.at_css('title').text
                     end
                     @weibo_data = weibo_meta_data
                 end
