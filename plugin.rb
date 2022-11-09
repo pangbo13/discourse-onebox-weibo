@@ -1,14 +1,10 @@
 # name: discourse-onebox-weibo
 # about: 为 Discourse Onebox 增加微博支持
-# version: 0.1.9
+# version: 0.1.10
 # authors: pangbo13
 # url: https://github.com/pangbo13/discourse-onebox-weibo
 
 # redis-cli flushall
-
-require_relative "../../lib/onebox"
-
-enabled_site_setting :weibo_onebox_priority
 
 register_asset "stylesheets/common/weibo-onebox.scss"
 
