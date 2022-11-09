@@ -85,7 +85,7 @@ after_initialize do
                         # for search page, we only get the search keyword from url
                         # since the search page requires login
                         if URI(raw_url).host == "s.weibo.com"
-                            weibo_meta_data[:keywords] = CGI.parse(URI(raw_url).query)['q'].first
+                            weibo_meta_data[:description] = CGI.parse(URI(raw_url).query)['q'].first
                         else
                             html = Nokogiri::HTML(response)
                             html.css('meta').each do |m|
