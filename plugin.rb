@@ -1,6 +1,6 @@
 # name: discourse-onebox-weibo
 # about: 为 Discourse Onebox 增加微博支持
-# version: 0.2.0
+# version: 0.2.1
 # authors: pangbo13
 # url: https://github.com/pangbo13/discourse-onebox-weibo
 
@@ -18,7 +18,7 @@ after_initialize do
             class WeiboOnebox
                 include Engine
                 include LayoutSupport
-                matches_regexp(/^(?:(?:https?:\/\/)?(?:(passport\.weibo\.com\/visitor\/visitor\?.+)|(m\.weibo\.cn\/(?:detail|status)\/.+)|(share\.api\.weibo\.cn\/share\/.+)))$/)
+                matches_regexp(/^(?:(?:https?:\/\/)?(?:(passport\.weibo\.com\/visitor\/visitor\?.+)|(m\.weibo\.cn\/(?:detail|status)\/.+)|(share\.api\.weibo\.cn\/share\/.+)|(weibo\.com\/\d+(\/\w+)?\/?)))$/)
                 always_https
 
                 GOOGLE_UA = "Googlebot/2.1 (+http://www.google.com/bot.html)"
@@ -39,11 +39,15 @@ after_initialize do
                     @desktop ||= (uri.host == "passport.weibo.com")
                 end
 
+                def direct_url?
+                    @direct_url ||= (uri.host == "weibo.com")
+                end
+
                 def raw_url
                     if @raw_url
                         return @raw_url
                     end
-                    if mobile? || share_api?
+                    if mobile? || share_api? || direct_url?
                         @raw_url = uri.to_s
                     else    # for passport.weibo.com
                         # read url form params
@@ -81,7 +85,7 @@ after_initialize do
                                 weibo_meta_data[:'title'] =  I18n.t("weibo_onebox.title_by_user_name", user_name: user_name)
                             end
                         end
-                    else    # passport.weibo.com
+                    else    # passport.weibo.com & weibo.com
                         # for search page, we only get the search keyword from url
                         # since the search page requires login
                         if URI(raw_url).host == "s.weibo.com"
